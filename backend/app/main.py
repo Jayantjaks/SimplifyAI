@@ -30,6 +30,25 @@ app.include_router(document.router, prefix="/api/v1", tags=["Documents"])
 @app.on_event("startup")
 def on_startup():
     init_db()
+    s = get_settings()
+    key = s.groq_api_key
+    masked = (key[:6] + "..." + key[-4:]) if len(key) > 10 else f"(empty: len={len(key)})"
+    print(f"[WORKER-STARTUP] ai_provider  = {s.ai_provider}", flush=True)
+    print(f"[WORKER-STARTUP] groq_model   = {s.groq_model}", flush=True)
+    print(f"[WORKER-STARTUP] groq_api_key = {masked}", flush=True)
+
+
+@app.get("/debug-settings", tags=["Health"])
+def debug_settings():
+    s = get_settings()
+    key = s.groq_api_key
+    masked = (key[:6] + "..." + key[-4:]) if len(key) > 10 else f"(empty: len={len(key)})"
+    return {
+        "ai_provider": s.ai_provider,
+        "groq_model": s.groq_model,
+        "groq_api_key_masked": masked,
+        "google_api_key_len": len(s.google_api_key),
+    }
 
 
 @app.get("/", tags=["Health"])

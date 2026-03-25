@@ -16,25 +16,53 @@ from langgraph.graph import StateGraph, END
 from app.config import get_settings
 
 settings = get_settings()
+import sys
+print(f"[FLOW-LOADED] langgraph_flow.py imported fresh, ai_provider={settings.ai_provider}", flush=True)
+sys.stderr.write(f"[FLOW-LOADED-ERR] ai_provider={settings.ai_provider}\n")
+sys.stderr.flush()
 
 
 # ── LLM Factory ────────────────────────────────────────────────────────────
 
 def _get_llm():
-    """Return the configured LLM (Google Gemini or OpenAI)."""
-    if settings.ai_provider == "openai":
-        from langchain_openai import ChatOpenAI
-        return ChatOpenAI(
-            model=settings.openai_model,
-            api_key=settings.openai_api_key,
+    """Return the configured LLM (Groq, Google Gemini, or OpenAI)."""
+    import os
+    s = get_settings()
+    env_provider = os.environ.get("AI_PROVIDER", "(not in os.environ)")
+    msg = f"[LLM] os={env_provider} | settings={s.ai_provider} | groq_key={s.groq_api_key[:6] if s.groq_api_key else 'empty'}"
+    print(msg, flush=True)
+    sys.stderr.write(msg + "\n")
+    sys.stderr.flush()
+
+    if s.ai_provider == "groq":
+        from langchain_groq import ChatGroq
+        sys.stderr.write(f"[LLM] --> ChatGroq model={s.groq_model}\n")
+        sys.stderr.flush()
+        return ChatGroq(
+            model=s.groq_model,
+            api_key=s.groq_api_key,
             temperature=0.3,
         )
-    # Default: Google Gemini
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    return ChatGoogleGenerativeAI(
-        model=settings.gemini_model,
-        google_api_key=settings.google_api_key,
-        temperature=0.3,
+
+    if s.ai_provider == "openai":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=s.openai_model,
+            api_key=s.openai_api_key,
+            temperature=0.3,
+        )
+
+    if s.ai_provider == "google":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        return ChatGoogleGenerativeAI(
+            model=s.gemini_model,
+            google_api_key=s.google_api_key,
+            temperature=0.3,
+        )
+
+    raise ValueError(
+        f"Unknown ai_provider='{s.ai_provider}'. "
+        f"Supported values: groq, openai, google"
     )
 
 
